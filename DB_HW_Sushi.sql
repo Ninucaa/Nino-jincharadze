@@ -48,6 +48,40 @@ CREATE TABLE Payment (
     payment_status VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE Order_Status (
+    status_id SERIAL PRIMARY KEY,
+    status_name VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE Order_Tracking (
+    tracking_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES "Order"(order_id) ON DELETE CASCADE,
+    status_id INT REFERENCES Order_Status(status_id),
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Customer_Feedback (
+    feedback_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES "Order"(order_id) ON DELETE CASCADE,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    feedback_comments TEXT
+);
+
+INSERT INTO Customer_Feedback (order_id, rating, feedback_comments) VALUES
+(1, 5, 'Delicious sushi! Will order again.'),
+(2, 4, 'Great service, but delivery took longer than expected.');
+
+INSERT INTO Order_Tracking (order_id, status_id) VALUES
+(1, 1),  
+(2, 2),  
+(3, 3);  
+
+INSERT INTO Order_Status (status_name) VALUES
+('Pending'),
+('Processing'),
+('Completed'),
+('Cancelled');
+
 INSERT INTO Customer (first_name, last_name, phone, email) VALUES
 ('Nika', 'Berdzenishvili', '598-123-456', 'nika.berdzenishvili@example.com'),
 ('Salome', 'Jgenti', '599-234-567', 'salome.jgenti@example.com'),
@@ -117,8 +151,6 @@ INSERT INTO Payment (order_id, payment_method, payment_status) VALUES
 (4, 'PayPal', 'Completed');       
 
 SELECT * FROM Payment;
-
-
 
 
 
