@@ -1,0 +1,83 @@
+
+Task 6. Prepare answers to the following questions
+
+1. What operations do the following functions perform:
+- film_in_stock: Tells you if a film is available in the inventory.
+- film_not_in_stock: Tells you if a film is not available in the inventory or is out of stock.
+- inventory_in_stock: Returns a boolean indicating if a specific inventory item is in stock.
+- get_customer_balance: Computes the balance for a customer.
+- inventory_held_by_customer: Tracks the inventory items currently rented by a customer.
+- rewards_report: Generates a report on customer rewards based on their rental history and payments.
+- last_day: Calculates the last day for a certain event.
+
+2. Why does ‘rewards_report’ function return 0 rows? Correct and recreate the function so that it's able to return rows properly.
+The rewards_report function may return 0 rows because the query inside the function might not match any rows in the database, or there is no reward data, or if the customer’s rewards have not been correctly calculated or stored. Here's the corrected version of the function:
+
+CREATE OR REPLACE FUNCTION rewards_report()
+RETURNS TABLE(customer_id INT, reward_points INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT c.customer_id,
+           COALESCE(SUM(r.points), 0) AS reward_points
+    FROM customer c
+    LEFT JOIN rentals r ON r.customer_id = c.customer_id
+    GROUP BY c.customer_id
+    HAVING SUM(r.points) > 0;  -- Ensure we only return customers with reward points
+END;
+$$ LANGUAGE plpgsql;
+
+3. Is there any function that can potentially be removed from the dvd_rental codebase? If so, which one and why?
+The film_not_in_stock function could potentially be removed if the film_in_stock function already covers both cases (film in stock and film not in stock).
+
+4. The ‘get_customer_balance’ function describes the business requirements for calculating the client balance. Unfortunately, not all of them are implemented in this function. Try to change the function using the requirements from the comments.
+Here’s the updated version of the get_customer_balance function based on the given business logic:
+
+CREATE OR REPLACE FUNCTION get_customer_balance(customer_id INT)
+RETURNS DECIMAL AS $$
+DECLARE
+    balance DECIMAL;
+BEGIN
+    SELECT COALESCE(SUM(rental_fee), 0) - COALESCE(SUM(payment_amount), 0)
+    INTO balance
+    FROM rentals
+    LEFT JOIN payments ON rentals.rental_id = payments.rental_id
+    WHERE rentals.customer_id = customer_id
+    AND rentals.return_date IS NULL;  -- Only unpaid rentals
+
+    RETURN balance;
+END;
+$$ LANGUAGE plpgsql;
+
+5. How do ‘group_concat’ and ‘_group_concat’ functions work? (database creation script might help) Where are they used?
+- group_concat: The equivalent function in PostgreSQL is string_agg(), which concatenates values from multiple rows into a single string.
+- _group_concat: This is a custom function that may exist in the database schema. It is essential to check your schema for such a function.
+
+Example using string_agg():
+
+SELECT cus.customer_id, string_agg(f.title, ', ') AS films_rented
+FROM rental r
+JOIN inventory i ON i.inventory_id = r.inventory_id
+JOIN customer cus ON cus.customer_id = r.customer_id
+JOIN film f ON i.film_id = f.film_id
+GROUP BY cus.customer_id;
+
+6. What does the ‘last_updated’ function do? Where is it used?
+The last_updated function is used to track when a specific row or table was last modified. Here’s an example:
+
+SELECT film.last_update
+FROM film
+WHERE film.film_id = 1;
+
+7. What is the tmpSQL variable for in the ‘rewards_report’ function? Can this function be recreated without the EXECUTE statement and dynamic SQL? Why?
+1. The tmpSQL variable is used to build a flexible query depending on user input or data constraints.
+2. Yes, this function can be recreated without the EXECUTE statement and dynamic SQL if the query can be simplified to a static one. Dynamic SQL is only necessary if the query structure needs to be flexible or change based on runtime conditions. If not, static queries can replace dynamic SQL.
+
+Here’s a version without dynamic SQL:
+
+CREATE OR REPLACE FUNCTION rewards_report()
+RETURNS TABLE(customer_id INT, reward_points INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT customer_id, SUM(points) FROM rewards GROUP BY customer_id;
+END;
+$$ LANGUAGE plpgsql;
