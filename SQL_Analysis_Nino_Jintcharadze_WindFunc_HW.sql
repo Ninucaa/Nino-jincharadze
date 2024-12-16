@@ -82,23 +82,35 @@ WITH RankedCustomers AS (
     JOIN 
         sh.times t ON s.time_id = t.time_id
     WHERE 
-        EXTRACT(YEAR FROM t.time_id) IN (1998, 1999, 2000, 2001)
+        EXTRACT(YEAR FROM t.time_id) IN (1998, 1999, 2001) 
     GROUP BY 
         c.cust_id, c.cust_last_name, c.cust_first_name, sales_year
+),
+TopCustomers AS (
+    SELECT
+        cust_id,
+        COUNT(DISTINCT sales_year) AS years_in_top_300
+    FROM
+        RankedCustomers
+    WHERE
+        sales_rank <= 300
+    GROUP BY
+        cust_id
+    HAVING
+        COUNT(DISTINCT sales_year) = 3  -- customer ranks in the top 300 for all three years
 )
-
 SELECT 
-    sales_year,
-    cust_id,
-    cust_last_name,
-    cust_first_name,
-    ROUND(total_sales, 2) AS amount_sold
+    rc.sales_year,
+    rc.cust_id,
+    rc.cust_last_name,
+    rc.cust_first_name,
+    ROUND(rc.total_sales, 2) AS amount_sold
 FROM 
-    RankedCustomers
-WHERE 
-    sales_rank <= 300
+    RankedCustomers rc
+JOIN 
+    TopCustomers tc ON rc.cust_id = tc.cust_id
 ORDER BY 
-    sales_year, sales_rank;
+    rc.sales_year, rc.sales_rank;
 	
 -- Task 4: Summarize product sales by year and month for specific channels
 SELECT 
