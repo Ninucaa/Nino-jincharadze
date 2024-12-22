@@ -1,4 +1,4 @@
---1.annual sales analysis by channel and region.
+-- 1. Annual sales analysis by channel and region.
 WITH TotalSales AS (
     SELECT co.country_region, t.calendar_year, ch.channel_desc, SUM(s.amount_sold) AS amount_sold
     FROM sh.sales s
@@ -26,7 +26,7 @@ SELECT country_region, calendar_year, channel_desc, ROUND(amount_sold, 2) AS amo
 FROM PreviousYearSales
 ORDER BY country_region, calendar_year, channel_desc;
 
---2.weekly sales report with cumulative and moving average calculations.
+-- 2. Weekly sales report with cumulative and moving average calculations.
 WITH WeeklySales AS (
     SELECT EXTRACT(WEEK FROM t.time_id) AS week_number, EXTRACT(YEAR FROM t.time_id) AS sales_year,
         SUM(s.amount_sold) AS total_sales, t.time_id
@@ -82,8 +82,8 @@ FROM CenteredAvg
 WHERE week_number IN (49, 50, 51)
 ORDER BY week_number, time_id;
 
---3. window functions demonstration with frame clauses.
---3.1 RANGE
+-- 3. Window functions demonstration with frame clauses.
+-- 3.1 RANGE
 SELECT cust_id, time_id, amount_sold,
     SUM(amount_sold) OVER (
         ORDER BY time_id 
@@ -92,7 +92,7 @@ SELECT cust_id, time_id, amount_sold,
 FROM sh.sales
 ORDER BY time_id;
 
---3.2 ROWS
+-- 3.2 ROWS
 SELECT time_id, amount_sold,
     AVG(amount_sold) OVER (
         ORDER BY time_id 
@@ -101,7 +101,7 @@ SELECT time_id, amount_sold,
 FROM sh.sales
 ORDER BY time_id;
 
---3.3 GROUPS
+-- 3.3 GROUPS
 SELECT time_id, amount_sold,
     SUM(amount_sold) OVER (
         ORDER BY time_id 
@@ -112,4 +112,4 @@ SELECT time_id, amount_sold,
         GROUPS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS sales_rank
 FROM sh.sales
-ORDER BY  time_id;
+ORDER BY time_id; 
