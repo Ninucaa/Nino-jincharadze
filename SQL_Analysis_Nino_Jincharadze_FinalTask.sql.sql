@@ -1,20 +1,20 @@
---Task1: Window Functions
+--Task1:Window Functions
 --Generate a report for each channel identifying the regions with the highest quantity of products sold.
-SELECT 
-    ch.channel_desc, c.country_region,
-    ROUND(SUM(s.quantity_sold),2) AS sales,--Total products sold in each region,rounded to two decimal places
-    CONCAT(
-        ROUND(
-            (SUM(s.quantity_sold)*100.0)/
-            SUM(SUM(s.quantity_sold))OVER(PARTITION BY ch.channel_desc),--Total sales for each channel
-        2),'%') AS sales_percentage--Percentage with two decimal places and '%' sign
-FROM sh.sales s
-JOIN sh.channels ch ON s.channel_id=ch.channel_id
-JOIN sh.customers cu ON s.cust_id=cu.cust_id
-JOIN sh.countries c ON cu.country_id=c.country_id
-GROUP BY ch.channel_desc,c.country_region --Aggregate data by channel and region
-ORDER BY sales DESC;--Sort by sales in descending order to highlight top regions
-
+WITH ChannelRegionSales AS (
+    SELECT ch.channel_desc,c.country_region,
+    ROUND(SUM(s.quantity_sold),2) AS total_sales, -- Total products sold in each region, rounded to 2 decimal places
+    RANK()OVER(PARTITION BY ch.channel_desc ORDER BY SUM(s.quantity_sold) DESC) AS sales_rank -- Rank regions by total sales for each channel
+    FROM sh.sales s
+    JOIN sh.channels ch ON s.channel_id=ch.channel_id
+    JOIN sh.customers cu ON s.cust_id=cu.cust_id
+    JOIN sh.countries c ON cu.country_id=c.country_id
+    GROUP BY ch.channel_desc,c.country_region
+)
+--Filter to include only the regions with the highest sales (rank=1)
+SELECT channel_desc,country_region,total_sales
+FROM ChannelRegionSales
+WHERE sales_rank=1
+ORDER BY channel_desc,total_sales DESC;
 
 --Task 2. Window Functions
 --Step1:Calculate sales for each subcategory by year
