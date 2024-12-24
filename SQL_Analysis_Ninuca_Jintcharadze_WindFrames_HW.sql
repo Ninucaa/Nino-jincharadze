@@ -6,7 +6,7 @@ WITH TotalSales AS (
     JOIN sh.times t ON s.time_id = t.time_id
     JOIN sh.countries co ON c.country_id = co.country_id
     JOIN sh.channels ch ON s.channel_id = ch.channel_id  
-    WHERE t.calendar_year BETWEEN 1999 AND 2001 AND co.country_region IN ('Americas', 'Asia', 'Europe')
+    WHERE t.calendar_year BETWEEN 1998 AND 2001 AND co.country_region IN ('Americas', 'Asia', 'Europe')
     GROUP BY co.country_region, t.calendar_year, ch.channel_desc
 ),
 SalesPercentages AS (
@@ -44,36 +44,12 @@ SalesWithCumulativeSum AS (
 ),
 
 CenteredAvg AS (
-    SELECT t.time_id, swc.week_number, swc.sales_year, swc.total_sales, swc.cum_sum,
-        CASE 
-            WHEN EXTRACT(DOW FROM t.time_id) = 1 THEN  -- Monday
-                (SELECT AVG(total_sales) 
-                 FROM WeeklySales 
-                 WHERE time_id IN (
-                     (SELECT time_id FROM sh.times WHERE time_id = t.time_id - interval '2 days'),  -- Saturday
-                     t.time_id - interval '1 day',  -- Sunday
-                     t.time_id,  -- Monday
-                     t.time_id + interval '1 day'  -- Tuesday
-                 ))
-            WHEN EXTRACT(DOW FROM t.time_id) = 5 THEN  -- Friday
-                (SELECT AVG(total_sales) 
-                 FROM WeeklySales 
-                 WHERE time_id IN (
-                     t.time_id - interval '1 day',  -- Thursday
-                     t.time_id,  -- Friday
-                     (SELECT time_id FROM sh.times WHERE time_id = t.time_id + interval '1 day')  -- Saturday
-                 ))
-            ELSE 
-                (SELECT AVG(total_sales) 
-                 FROM WeeklySales 
-                 WHERE time_id IN (
-                     t.time_id - interval '1 day',  -- Previous day
-                     t.time_id,  -- Current day
-                     t.time_id + interval '1 day'  -- Following day
-                 ))
-        END AS centered_3_day_avg
+    SELECT swc.time_id, swc.week_number, swc.sales_year, swc.total_sales, swc.cum_sum,
+        AVG(total_sales) OVER (
+            ORDER BY swc.time_id 
+            ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
+        ) AS centered_3_day_avg
     FROM SalesWithCumulativeSum swc
-    JOIN sh.times t ON swc.time_id = t.time_id
 )
 
 SELECT week_number, sales_year, ROUND(total_sales, 2) AS total_sales,
@@ -112,4 +88,4 @@ SELECT time_id, amount_sold,
         GROUPS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS sales_rank
 FROM sh.sales
-ORDER BY time_id; 
+ORDER BY time_id;
